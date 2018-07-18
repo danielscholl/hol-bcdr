@@ -106,16 +106,16 @@ function Write-Color([String[]]$Text, [ConsoleColor[]]$Color = "White", [int]$St
       Write-Error -Message "Storage Account in $ResourceGroupName not found. Please fix and continue"
       return
     }
-  
+
     $Keys = Get-AzureRmStorageAccountKey -Name $StorageAccount.StorageAccountName `
       -ResourceGroupName $ResourceGroupName
-  
+
     $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount.StorageAccountName `
       -StorageAccountKey $Keys[0].Value
-  
+
     return New-AzureStorageContainerSASToken -Name $ContainerName -Context $StorageContext -Permission r -ExpiryTime (Get-Date).AddMinutes(20)
   }
-  
+
 
 ###############################
 ## Azure Intialize           ##
@@ -129,10 +129,6 @@ CreateResourceGroup $ResourceGroupName2 $Location2
 Write-Color -Text "Retrieving Storage Account Information..." -Color Green
 $StorageAccountName = GetStorageAccount $AzureAutomationGroup
 
-Write-Color -Text "Retrieving Storage Account SAS Tokens..." -Color Green
-Write-Color -Text "$StorageAccountName" -Color White
-$SasToken = GetSASToken $AzureAutomationGroup $StorageAccountName templates
-
 ##############################
 ## Deploy Template          ##
 ##############################
@@ -142,6 +138,5 @@ Write-Color -Text "---------------------------------------------------- "-Color 
 New-AzureRmResourceGroupDeployment -Name $DEPLOYMENT `
   -TemplateFile $BASE_DIR\azuredeploy.json `
   -TemplateParameterFile $BASE_DIR\azuredeploy.parameters.json `
-  -storageAccountName $StorageAccountName -sasToken $SasToken `
-  -servicePrincipalAppId $Principal `
+  -storageAccountName $StorageAccountName -servicePrincipalAppId $Principal `
   -ResourceGroupName $ResourceGroupName

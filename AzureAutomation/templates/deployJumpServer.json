@@ -49,12 +49,37 @@
           "2016-Datacenter-with-Containers",
           "2016-Datacenter"
         ]
+      },
+      "domainName": {
+        "type": "string",
+        "metadata": {
+            "description": "The FQDN of the Active Directory Domain to be created"
+        },
+        "defaultValue": "contoso.com"
       }
     },
     "variables": {
-      "NicName": "[concat(parameters('vmName'), '-nic')]"
+      "DnsName": "[toLower(concat('jump', uniqueString(resourceGroup().id) ) )]",
+      "NicName": "[concat(parameters('vmName'), '-nic')]",
+      "PublicIpName": "[concat(parameters('vmName'), '-ip')]"
     },
     "resources": [
+      {
+        "comments": "## Public IP Address ##",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('PublicIpName')]",
+        "apiVersion": "2015-06-15",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Public IP Address - PublicVM"
+        },
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[variables('DnsName')]"
+          }
+        }
+      },
       {
         "comments": "## Network Interface ##",
         "type": "Microsoft.Network/networkInterfaces",
@@ -62,15 +87,20 @@
         "apiVersion": "2016-03-30",
         "location": "[resourceGroup().location]",
         "tags": {
-          "displayName": "Network Interface - PrivateVM"
+          "displayName": "Network Interface - PublicVM"
         },
-        "dependsOn": [ ],
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIpName'))]"
+        ],
         "properties": {
           "ipConfigurations": [
             {
               "name": "ipconfig1",
               "properties": {
                 "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
+                },
                 "subnet": {
                   "id": "[parameters('subnetId')]"
                 }
@@ -91,7 +121,7 @@
         "apiVersion": "2016-04-30-preview",
         "location": "[resourceGroup().location]",
         "tags": {
-          "displayName": "Virtual Machine - PublicVM"
+          "displayName": "Virtual Machine - JumpServer"
         },
         "dependsOn": [
           "[resourceId('Microsoft.Network/networkInterfaces', variables('NicName'))]"
@@ -129,7 +159,51 @@
             }
           }
         },
-        "resources": [ ]
+        "resources": [
+          {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'), '/BGInfo')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+            ],
+            "properties": {
+              "publisher": "Microsoft.Compute",
+              "type": "BGInfo",
+              "typeHandlerVersion": "2.1",
+              "autoUpgradeMinorVersion": true,
+              "settings": {},
+              "protectedSettings": null
+            }
+          },
+          {
+            "comments": "## Domain Join Extension ##",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'), '/joindomain')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+            ],
+            "properties": {
+              "publisher": "Microsoft.Compute",
+              "type": "JsonADDomainExtension",
+              "typeHandlerVersion": "1.3",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "Name": "[parameters('domainName')]",
+                "User": "[concat(parameters('domainName'), '\\', parameters('adminUserName'))]",
+                "Restart": "true",
+                "Options": "3",
+                "OUPath": ""
+              },
+              "protectedSettings": {
+                "Password": "[parameters('adminPassword')]"
+              }
+            }
+          }
+        ]
       }
     ],
     "outputs": {}

@@ -2,7 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-
       "subnetId": {
         "type": "string",
         "metadata": {
@@ -51,7 +50,7 @@
         "type": "string",
         "metadata": {
           "description": "The Image Publisher Type"
-        },  
+        },
         "allowedValues": [
           "MicrosoftWindowsServer",
           "MicrosoftSQLServer"
@@ -79,9 +78,22 @@
           "Standard"
         ],
         "defaultValue": "2016-Datacenter"
+      },
+      "StorageAccountName": {
+        "type": "string",
+        "metadata": {
+          "description": "Storage Account hosting artifacts"
+        }
+      },
+      "ScriptName": {
+        "type": "string",
+        "metadata": {
+          "description": "DSC Script Configuration URL."
+        }
       }
     },
     "variables": {
+      "assetLocation": "[concat('https://', parameters('StorageAccountName'), '.blob.core.windows.net/scripts/', parameters('ScriptName'), '.zip')]",
       "AvailabilitySetName": "[concat(parameters('vmName'), '-as')]"
     },
     "resources": [
@@ -152,7 +164,18 @@
             },
             "osDisk": {
               "createOption": "FromImage"
-            }
+            },
+            "dataDisks": [
+              {
+                "name": "[concat(parameters('vmName'), copyIndex(), '-d1')]",
+                "diskSizeGB": 250,
+                "lun": 0,
+                "createOption": "Empty",
+                "managedDisk": {
+                  "storageAccountType": "Standard_LRS"
+                }
+              }
+            ]
           },
           "osProfile": {
             "computerName": "[concat(parameters('vmName'), copyIndex())]",
@@ -173,6 +196,56 @@
           }
         },
         "resources": []
+      },
+      {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "name": "[concat(parameters('vmName'), copyIndex(), '/BGInfo')]",
+        "apiVersion": "2016-04-30-preview",
+        "location": "[resourceGroup().location]",
+        "copy": {
+          "name": "bgExtLoop",
+          "count": "[parameters('numberOfInstances')]"
+        },
+        "dependsOn": [
+          "virtualMachineLoop"
+        ],
+        "properties": {
+          "publisher": "Microsoft.Compute",
+          "type": "BGInfo",
+          "typeHandlerVersion": "2.1",
+          "autoUpgradeMinorVersion": true,
+          "settings": {},
+          "protectedSettings": null
+        }
+      },
+      {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "name": "[concat(parameters('vmName'), copyIndex(), '/dbConfig')]",
+        "apiVersion": "2016-04-30-preview",
+        "location": "[resourceGroup().location]",
+        "copy": {
+          "name": "csExtLoop",
+          "count": "[parameters('numberOfInstances')]"
+        },
+        "dependsOn": [
+          "virtualMachineLoop"
+        ],
+        "properties": {
+          "publisher": "Microsoft.Powershell",
+          "type": "DSC",
+          "typeHandlerVersion": "2.9",
+          "autoUpgradeMinorVersion": true,
+          "settings": {
+            "configuration": {
+              "url": "[variables('assetLocation')]",
+              "script": "[concat(parameters('scriptName'), '.ps1')]",
+              "function": "Main"
+            },
+            "configurationArguments": {
+              "nodeName": "[parameters('vmName')]"
+            }
+          }
+        }
       }
     ],
     "outputs": {

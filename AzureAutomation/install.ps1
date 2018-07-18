@@ -122,7 +122,7 @@ function Write-Color([String[]]$Text, [ConsoleColor[]]$Color = "White", [int]$St
 
     return (Get-AzureRmStorageAccount -ResourceGroupName $ResourceGroupName).StorageAccountName
   }
-  function Create-Container ($ResourceGroupName, $ContainerName, $Access = "Off") {
+  function Create-Container ($ResourceGroupName, $ContainerName, $Access = "Blob") {
     # Required Argument $1 = RESOURCE_GROUP
     # Required Argument $2 = CONTAINER_NAME
 
@@ -168,6 +168,22 @@ $StorageAccountName = GetStorageAccount $ResourceGroupName
 ## Sync script artifacts    ##
 ##############################
 $DIRECTORY = "scripts"
+Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
+Write-Color -Text "Uploading ", "$DIRECTORY ", "artifacts..." -Color Green, Red, Green
+Write-Color -Text "---------------------------------------------------- "-Color Yellow
+
+Write-Color -Text "Creating Container for $DIRECTORY..." -Color Yellow
+Create-Container $ResourceGroupName $DIRECTORY
+
+$files = @(Get-ChildItem $BASE_DIR\$DIRECTORY)
+foreach ($file in $files) {
+  Upload-File $ResourceGroupName $DIRECTORY $BASE_DIR\$DIRECTORY\$file
+}
+
+##############################
+## Sync template artifacts  ##
+##############################
+$DIRECTORY = "templates"
 Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
 Write-Color -Text "Uploading ", "$DIRECTORY ", "artifacts..." -Color Green, Red, Green
 Write-Color -Text "---------------------------------------------------- "-Color Yellow
