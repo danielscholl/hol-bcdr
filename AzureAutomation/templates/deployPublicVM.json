@@ -1,0 +1,155 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "subnetId": {
+        "type": "string",
+        "metadata": {
+          "description": "Subnet ID to associate VM to."
+        }
+      },
+      "vmName": {
+        "type": "string",
+        "metadata": {
+          "description": "Virtual Machine 1 Server Name."
+        },
+        "defaultValue": "vm",
+        "minLength": 1
+      },
+      "vmSize": {
+        "type": "string",
+        "metadata": {
+          "description": "The virtual machine server size."
+        },
+        "defaultValue": "Standard_A1"
+      },
+      "adminUserName": {
+        "type": "string",
+        "metadata": {
+          "description": "Admin user account name."
+        },
+        "defaultValue": "azureuser",
+        "minLength": 1
+      },
+      "adminPassword": {
+        "type": "string",
+        "metadata": {
+          "description": "Admin user account password."
+        }
+      },
+      "WindowsOSVersion": {
+        "type": "string",
+        "metadata": {
+          "description": "The Windows version for the VM."
+        },
+        "defaultValue": "2016-Datacenter",
+        "allowedValues": [
+          "2012-Datacenter",
+          "2012-R2-Datacenter",
+          "2016-Datacenter-with-Containers",
+          "2016-Datacenter"
+        ]
+      }
+    },
+    "variables": {
+      "NicName": "[concat(parameters('vmName'), '-nic')]",
+      "PublicIpName": "[concat(parameters('vmName'), '-ip')]"
+    },
+    "resources": [
+      {
+        "comments": "## Public IP Address ##",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('PublicIpName')]",
+        "apiVersion": "2015-06-15",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Public IP Address - PublicVM"
+        },
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic"
+        }
+      },
+      {
+        "comments": "## Network Interface ##",
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[variables('NicName')]",
+        "apiVersion": "2016-03-30",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Network Interface - PublicVM"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/publicIPAddresses', variables('PublicIpName'))]"
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
+                },
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                }
+              }
+            }
+          ],
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      {
+        "comments": "## Virtual Machine ##",
+        "type": "Microsoft.Compute/virtualMachines",
+        "name": "[parameters('vmName')]",
+        "apiVersion": "2016-04-30-preview",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Virtual Machine - JumpServer"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkInterfaces', variables('NicName'))]"
+        ],
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[parameters('vmSize')]"
+          },
+          "osProfile": {
+            "computerName": "[parameters('vmName')]",
+            "adminUsername": "[parameters('adminUserName')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "[parameters('WindowsOSVersion')]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "createOption": "FromImage"
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('NicName'))]"
+              }
+            ]
+          },
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": false
+            }
+          }
+        },
+        "resources": [ ]
+      }
+    ],
+    "outputs": {}
+  }

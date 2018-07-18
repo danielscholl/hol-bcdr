@@ -1,0 +1,397 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "prefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Small unique string."
+      },
+      "defaultValue": "my",
+      "minLength": 2,
+      "maxLength": 5
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage Account hosting artifacts"  
+      }
+    },
+    "sasToken": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage Account Security Token"
+      }
+    },
+    "vnetPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Network Address Prefix (CIDR)"
+      },
+      "defaultValue": "10.0.0.0/16"
+    },
+    "gatewayPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet 1 Address Prefix (CIDR)"
+      },
+      "defaultValue": "10.0.0.0/24"
+    },
+    "webPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet 2 Address Prefix (CIDR)"
+      },
+      "defaultValue": "10.0.1.0/24"
+    },
+    "dataPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet 3 Address Prefix (CIDR)"
+      },
+      "defaultValue": "10.0.2.0/24"
+    },
+    "adPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet 4 Address Prefix (CIDR)"
+      },
+      "defaultValue": "10.0.3.0/24"
+    },
+    "servicePrincipalAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "ObjectId for User allowed KeyVault Secret Access. (az ad user show --upn user@email.com)"
+      }
+    },
+    "adminUser": {
+      "type": "string",
+      "metadata": {
+        "description": "Admin user account name."
+      },
+      "defaultValue": "azureuser",
+      "minLength": 3
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin user account password."
+      },
+      "minLength": 9
+    },
+    "jumpServerSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Server size."
+      },
+      "defaultValue": "Standard_A1"
+    },
+    "adServerSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Server size."
+      },
+      "defaultValue": "Standard_A2"
+    },
+    "webServerSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Server size."
+      },
+      "defaultValue": "Standard_A2"
+    },
+    "dbServerSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Server size."
+      },
+      "defaultValue": "Standard_A2"
+    }
+  },
+  "variables": {
+    "assetLocation": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net')]",
+    "jumpServerName": "jump",
+    "adServerName": "dc1",
+    "webServerName": "web",
+    "dbServerName": "db"
+  },
+  "resources": [
+    {
+      "name": "TemplateVNet",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployVNet.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "unique": {
+            "value": "[parameters('prefix')]"
+          },
+          "vnetPrefix": {
+            "value": "[parameters('vnetPrefix')]"
+          },
+          "subnet1Prefix": {
+            "value": "[parameters('gatewayPrefix')]"
+          },
+          "subnet2Prefix": {
+            "value": "[parameters('webPrefix')]"
+          },
+          "subnet3Prefix": {
+            "value": "[parameters('dataPrefix')]"
+          },
+          "subnet4Prefix": {
+            "value": "[parameters('adPrefix')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateStorage",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployStorageAccount.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "unique": {
+            "value": "[parameters('prefix')]"
+          },
+          "storageAccountType": {
+            "value": "Standard_LRS"
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateKeyVault",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployKeyVault.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "unique": {
+            "value": "[parameters('prefix')]"
+          },
+          "servicePrincipalAppId": {
+            "value": "[parameters('servicePrincipalAppId')]"
+          },
+          "adminUserName": {
+            "value": "[parameters('adminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateJumpServer",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateKeyVault",
+        "TemplateVNet"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployPublicVM.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet4Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('jumpserverName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('jumpServerSize')]"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateADServer",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateKeyVault",
+        "TemplateVNet"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployPrivateVM.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet4Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('adServerName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('adServerSize')]"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateWebServers",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateKeyVault",
+        "TemplateVNet"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployVMas.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet2Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('webServerName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('webServerSize')]"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateDbServers",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateKeyVault",
+        "TemplateVNet"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployVMas.json', parameters('sasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet3Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('dbServerName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('dbServerSize')]"
+          },
+          "Publisher": {
+            "value": "MicrosoftSQLServer"
+          },
+          "Offer": {
+            "value": "SQL2016SP1-WS2016"
+          },
+          "Sku": {
+            "value": "Standard"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "virtualNetwork": {
+      "type": "object",
+      "value": "[reference('TemplateVNet').outputs.virtualNetwork.value]"
+    },
+    "subnets": {
+      "type": "object",
+      "value": "[reference('TemplateVNet').outputs.subnets.value]"
+    },
+    "storageAccount": {
+      "type": "object",
+      "value": "[reference('TemplateStorage').outputs.storageAccount.value]"
+    },
+    "keyVault": {
+      "type": "object",
+      "value": "[reference('TemplateKeyVault').outputs.keyVault.value]"
+    }
+  }
+}

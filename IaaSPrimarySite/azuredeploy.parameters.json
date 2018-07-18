@@ -1,0 +1,21 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "prefix": {
+      "value": "bcdr"
+    },
+    "jumpServerSize": {
+      "value": "Standard_A1_v2"
+    },
+    "adServerSize": {
+      "value": "Standard_A2_v2"
+    },
+    "webServerSize": {
+      "value": "Standard_A2_v2"
+    },
+    "dbServerSize": {
+      "value": "Standard_A2_v2"
+    }
+  }
+}

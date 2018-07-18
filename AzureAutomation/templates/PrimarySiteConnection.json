@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    },
+    "variables": {
+      "PrimaryGatewayName": "VNETGateway",
+      "PrimaryGatewayResourceGroup": "IaaSPrimarySite",
+      "SecondaryGatewayName": "VNETFOGateway",
+      "SecondaryGatewayResourceGroup": "IaaSSecondarySite",
+      "PrimarySiteConnectionName": "VNET-to-FOVNET",
+      "sharedKey": "A1B2C3D4E5"
+    },
+    "resources": [
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/connections",
+        "name": "[variables('PrimarySiteConnectionName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "VNET-FOVNET Connection"
+        },
+        "dependsOn": [
+        ],
+        "properties": {
+          "virtualNetworkGateway1": {
+            "id": "[resourceId(variables('PrimaryGatewayResourceGroup'), 'Microsoft.Network/virtualNetworkGateways',variables('PrimaryGatewayName'))]"
+          },
+          "virtualNetworkGateway2": {
+            "id": "[resourceId(variables('SecondaryGatewayResourceGroup'), 'Microsoft.Network/virtualNetworkGateways',variables('SecondaryGatewayName'))]"
+          },
+          "connectionType": "Vnet2Vnet",
+          "sharedKey": "[variables('sharedKey')]"
+        }
+      }
+    ],
+    "outputs": {
+    }
+  }

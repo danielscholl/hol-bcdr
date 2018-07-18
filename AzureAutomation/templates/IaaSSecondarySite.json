@@ -1,0 +1,504 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    },
+    "variables": {
+      "BCDRPrimarySiteConnection": "https://raw.githubusercontent.com/solliancenet/bcdr/master/BCDRPrimarySiteConnection.json",
+      "BCDRFOVNetPrefix": "172.16.0.0/16",
+      "BCDRFOVNetSubnet1Name": "GatewaySubnet",
+      "BCDRFOVNetSubnet1Prefix": "172.16.0.0/24",
+      "BCDRFOVNetSubnet2Name": "WEB",
+      "BCDRFOVNetSubnet2Prefix": "172.16.1.0/24",
+      "BCDRFOVNetSubnet3Name": "DATA",
+      "BCDRFOVNetSubnet3Prefix": "172.16.2.0/24",
+      "BCDRFOVNetSubnet4Name": "AD",
+      "BCDRFOVNetSubnet4Prefix": "172.16.3.0/24",
+      "vnetID1": "[resourceId('Microsoft.Network/virtualNetworks', 'BCDRFOVNET')]",
+      "InternalLoadBalancerName": "SQLAOGILB",
+      "InternalLoadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('InternalLoadBalancerName'))]",
+      "GatewayPublicIPName": "BCDRFOVNETGateway-PIP",
+      "PrimaryGatewayName": "BCDRVNETGateway",
+      "SecondaryGatewayName": "BCDRVNETFOGateway",
+      "GatewaySubnetRef": "[concat(variables('vnetID1'),'/subnets/','GatewaySubnet')]",
+      "PrimaryGatewayResourceGroup": "BCDRIaaSPrimarySite",
+      "PrimarySiteConnectionName": "BCDRVNET-to-BCDRFOVNET",
+      "SecodarySiteConnectionName": "BCDRFOVNET-to-BCDRVNET",
+      "sharedKey": "A1B2C3D4E5",
+      "WEBAVSETName": "WEBAVSET",
+      "SQLAVSETName": "SQLAVSET",
+      "SQLVM3Name": "SQLVM3",
+      "SQLVM3AdminUserName": "mcwadmin",
+      "SQLVM3AdminPassword": "demo@pass123",
+      "SQLVM3ImagePublisher": "MicrosoftSQLServer",
+      "SQLVM3ImageOffer": "SQL2017-WS2016",
+      "SQLVM3WindowsOSVersion": "SQLDEV",
+      "SQLVM3OSDiskName": "SQLVM3OSDisk",
+      "SQLVM3VmSize": "Standard_F2s",
+      "SQLVM3VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'BCDRFOVNet')]",
+      "SQLVM3SubnetRef": "[concat(variables('SQLVM3VnetID'), '/subnets/', variables('BCDRFOVNetSubnet3Name'))]",
+      "SQLVM3StorageAccountContainerName": "vhds",
+      "SQLVM3NicName": "[concat(variables('SQLVM3Name'), '-NIC')]",
+      "SQLVM3ConfigArchiveFolder": ".",
+      "SQLVM3ConfigArchiveFileName": "SQLVM3Config.zip",
+      "SQLVM3ConfigURL": "https://github.com/solliancenet/bcdr/blob/master/CustomScripts/SQLVM3Config.zip?raw=true",
+      "SQLVM3JoinDomainScriptFolder": ".",
+      "SQLVM3JoinDomainScriptFileName": "SQLVM3JoinDomain.ps1",
+      "SQLVM3JoinDomainURL": "https://raw.githubusercontent.com/solliancenet/bcdr/master/CustomScripts/SQLVM3JoinDomain.ps1",
+      "ExternalLoadBalancerName": "WWWEXTLB",
+      "ExternalLoadBalancerPublicIPName": "WWWEXTLB-PIP",
+      "ExternalLoadBalancerPublicIPDNSName": "[concat('bcdrsecondarysitelb', uniqueString(resourceGroup().id))]",
+      "ExternalLoadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('ExternalLoadBalancerName'))]",
+      "ExternalLoadBalancerfrontEndIPConfigID": "[concat(variables('ExternalLoadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
+      "ExternalLoadBalancerPoolID": "[concat(variables('ExternalLoadBalancerID'),'/backendAddressPools/BackendPool1')]",
+      "ExternalLoadBalancerProbeID": "[concat(variables('ExternalLoadBalancerID'),'/probes/tcpProbe')]",
+      "ExternalLoadbalancerFrontEndIPConfigID": "[concat(variables('ExternalLoadbalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+    },
+    "resources": [
+      {
+        "name": "BCDRFOVNET",
+        "type": "Microsoft.Network/virtualNetworks",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-10-01",
+        "dependsOn": [],
+        "tags": {
+          "displayName": "BCDRFOVNET"
+        },
+        "properties": {
+          "addressSpace": {
+            "addressPrefixes": [
+              "[variables('BCDRFOVNetPrefix')]"
+            ]
+          },
+          "dhcpOptions": {
+            "dnsServers": [
+              "10.0.3.4",
+              "8.8.8.8"
+            ]
+          },
+          "subnets": [
+            {
+              "name": "[variables('BCDRFOVNetSubnet1Name')]",
+              "properties": {
+                "addressPrefix": "[variables('BCDRFOVNetSubnet1Prefix')]"
+              }
+            },
+            {
+              "name": "[variables('BCDRFOVNetSubnet2Name')]",
+              "properties": {
+                "addressPrefix": "[variables('BCDRFOVNetSubnet2Prefix')]"
+              }
+            },
+            {
+              "name": "[variables('BCDRFOVNetSubnet3Name')]",
+              "properties": {
+                "addressPrefix": "[variables('BCDRFOVNetSubnet3Prefix')]"
+              }
+            },
+            {
+              "name": "[variables('BCDRFOVNetSubnet4Name')]",
+              "properties": {
+                "addressPrefix": "[variables('BCDRFOVNetSubnet4Prefix')]"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('gatewayPublicIPName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Gateway Public IP"
+        },
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic"
+        }
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/virtualNetworkGateways",
+        "name": "[variables('SecondaryGatewayName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "Secondary Site VPN Gateway"
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Network/publicIPAddresses/', variables('gatewayPublicIPName'))]",
+          "[resourceId('Microsoft.Network/virtualNetworks', 'BCDRFOVNet')]"
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[variables('gatewaySubnetRef')]"
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('gatewayPublicIPName'))]"
+                }
+              },
+              "name": "vnetGatewayConfig"
+            }
+          ],
+          "gatewayType": "Vpn",
+          "vpnType": "RouteBased",
+          "enableBgp": "false",
+          "sku": {
+            "name": "VpnGw1",
+            "tier": "VpnGw1"
+          }
+        }
+      },
+      {
+        "name": "BCDRPrimarySiteConnection",
+        "type": "Microsoft.Resources/deployments",
+        "apiVersion": "2017-05-10",
+        "resourceGroup": "[variables('PrimaryGatewayResourceGroup')]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/virtualNetworkGateways/', variables('SecondaryGatewayName'))]"
+        ],
+        "properties": {
+          "mode": "Incremental",
+          "templateLink": {
+            "uri": "[variables('BCDRPrimarySiteConnection')]",
+            "contentVersion": "1.0.0.0"
+          }
+        }
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/connections",
+        "name": "[variables('SecodarySiteConnectionName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "BCDRFOVNET-BCDRVNET Connection"
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Network/virtualNetworkGateways/', variables('SecondaryGatewayName'))]"
+        ],
+        "properties": {
+          "virtualNetworkGateway1": {
+            "id": "[resourceId('Microsoft.Network/virtualNetworkGateways',variables('SecondaryGatewayName'))]",
+            "location": "centralus"
+          },
+          "virtualNetworkGateway2": {
+            "id": "[resourceId(variables('PrimaryGatewayResourceGroup'), 'Microsoft.Network/virtualNetworkGateways',variables('PrimaryGatewayName'))]"
+          },
+          "connectionType": "Vnet2Vnet",
+          "sharedKey": "[variables('sharedKey')]"
+        }
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/loadBalancers",
+        "name": "[variables('InternalLoadBalancerName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "SQL AOG LoadBalancer"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/virtualNetworks', 'BCDRFOVNet')]"
+        ],
+        "properties": {
+          "frontendIPConfigurations": [
+            {
+              "properties": {
+                "subnet": {
+                  "id": "[concat(variables('SQLVM3VnetID'), '/subnets/', variables('BCDRFOVNetSubnet3Name'))]"
+                },
+                "privateIPAddress": "172.16.2.100",
+                "privateIPAllocationMethod": "Static"
+              },
+              "name": "LoadBalancerFrontend"
+            }
+          ],
+          "backendAddressPools": [
+            {
+              "name": "BackendPool1"
+            }
+          ],
+          "loadBalancingRules": [
+            {
+              "properties": {
+                "frontendIPConfiguration": {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('InternalLoadBalancerName')), '/frontendIPConfigurations/LoadBalancerFrontend')]"
+                },
+                "backendAddressPool": {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('InternalLoadBalancerName')), '/backendAddressPools/BackendPool1')]"
+                },
+                "probe": {
+                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('InternalLoadBalancerName')), '/probes/lbprobe')]"
+                },
+                "protocol": "Tcp",
+                "frontendPort": 1433,
+                "backendPort": 1433,
+                "idleTimeoutInMinutes": 4,
+                "enableFloatingIP": true
+              },
+              "name": "lbrule"
+            }
+          ],
+          "probes": [
+            {
+              "properties": {
+                "protocol": "Tcp",
+                "port": 59999,
+                "intervalInSeconds": 5,
+                "numberOfProbes": 2
+              },
+              "name": "lbprobe"
+            }
+          ]
+        }
+      },
+      {
+        "name": "[variables('WEBAVSETName')]",
+        "type": "Microsoft.Compute/availabilitySets",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-12-01",
+        "dependsOn": [],
+        "tags": {
+          "displayName": "WEBAVSET"
+        },
+        "properties": {
+          "platformUpdateDomainCount": 5,
+          "platformFaultDomainCount": 2
+        }
+      },
+      {
+        "name": "[variables('SQLAVSETName')]",
+        "type": "Microsoft.Compute/availabilitySets",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-12-01",
+        "dependsOn": [],
+        "sku": {
+          "name": "Aligned"
+        },
+        "tags": {
+          "displayName": "SQLAVSET"
+        },
+        "properties": {
+          "platformUpdateDomainCount": 5,
+          "platformFaultDomainCount": 2
+        }
+      },
+      {
+        "name": "[variables('SQLVM3NicName')]",
+        "type": "Microsoft.Network/networkInterfaces",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-10-01",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/virtualNetworks', 'BCDRFOVNet')]",
+          "[concat('Microsoft.Network/virtualNetworkGateways/', variables('SecondaryGatewayName'))]"
+        ],
+        "tags": {
+          "displayName": "SQLVM3Nic"
+        },
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[variables('SQLVM3SubnetRef')]"
+                },
+                "loadBalancerBackendAddressPools": [
+                  {
+                    "id": "[concat(variables('InternalLoadBalancerID'), '/backendAddressPools/BackendPool1')]"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "[variables('SQLVM3Name')]",
+        "type": "Microsoft.Compute/virtualMachines",
+        "location": "[resourceGroup().location]",
+        "apiVersion": "2017-12-01",
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkInterfaces', variables('SQLVM3NicName'))]",
+          "[concat('Microsoft.Compute/availabilitySets/', variables('SQLAVSETName'))]",
+          "[concat('Microsoft.Network/virtualNetworkGateways/', variables('SecondaryGatewayName'))]"
+        ],
+        "tags": {
+          "displayName": "SQLVM3"
+        },
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[variables('SQLVM3VmSize')]"
+          },
+          "availabilitySet": {
+            "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('SQLAVSETName'))]"
+          },
+          "osProfile": {
+            "computerName": "[variables('SQLVM3Name')]",
+            "adminUsername": "[variables('SQLVM3AdminUsername')]",
+            "adminPassword": "[variables('SQLVM3AdminPassword')]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[variables('SQLVM3ImagePublisher')]",
+              "offer": "[variables('SQLVM3ImageOffer')]",
+              "sku": "[variables('SQLVM3WindowsOSVersion')]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "diskSizeGB": 1023
+            },
+            "dataDisks": [
+              {
+                "diskSizeGB": 1023,
+                "lun": 0,
+                "createOption": "Empty"
+              }
+            ]
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('SQLVM3NicName'))]"
+              }
+            ]
+          }
+        },
+        "resources": [
+          {
+            "name": "SQLVM3Config",
+            "type": "extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2017-12-01",
+            "dependsOn": [
+              "[resourceId('Microsoft.Compute/virtualMachines', variables('SQLVM3Name'))]"
+            ],
+            "tags": {
+              "displayName": "SQLVM3Config"
+            },
+            "properties": {
+              "publisher": "Microsoft.Powershell",
+              "type": "DSC",
+              "typeHandlerVersion": "2.9",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "configuration": {
+                  "url": "[concat(variables('SQLVM3ConfigURL'))]",
+                  "script": "SQLVM3Config.ps1",
+                  "function": "Main"
+                },
+                "configurationArguments": {
+                  "nodeName": "[variables('SQLVM3Name')]"
+                }
+              }
+            }
+          },
+          {
+            "name": "JoinDomainSQLVM3",
+            "type": "extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-03-30",
+            "dependsOn": [
+              "[resourceId('Microsoft.Compute/virtualMachines', variables('SQLVM3Name'))]",
+              "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('SQLVM3Name'), 'SQLVM3Config')]"
+            ],
+            "tags": {
+              "displayName": "JoinDomainSQLVM3"
+            },
+            "properties": {
+              "publisher": "Microsoft.Compute",
+              "type": "CustomScriptExtension",
+              "typeHandlerVersion": "1.4",
+              "autoUpgradeMinorVersion": true,
+              "settings": {
+                "fileUris": [
+                  "[variables('SQLVM3JoinDomainURL')]"
+                ],
+                "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('SQLVM3JoinDomainScriptFolder'), '/', variables('SQLVM3JoinDomainScriptFileName'))]"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[variables('ExternalLoadBalancerPublicIPName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "External Load Balancer Public IP"
+        },
+        "properties": {
+          "publicIPAllocationMethod": "Static",
+          "dnsSettings": {
+            "domainNameLabel": "[variables('ExternalLoadBalancerPublicIPDNSName')]"
+          }
+        }
+      },
+      {
+        "apiVersion": "2017-10-01",
+        "name": "[variables('ExternalLoadBalancerName')]",
+        "type": "Microsoft.Network/loadBalancers",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "displayName": "External Load Balancer"
+        },
+        "dependsOn": [
+          "[concat('Microsoft.Network/publicIPAddresses/', variables('ExternalLoadBalancerPublicIPName'))]"
+        ],
+        "properties": {
+          "frontendIPConfigurations": [
+            {
+              "name": "LoadBalancerFrontEnd",
+              "properties": {
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('ExternalLoadBalancerPublicIPName'))]"
+                }
+              }
+            }
+          ],
+          "backendAddressPools": [
+            {
+              "name": "BackendPool1"
+            }
+          ],
+          "loadBalancingRules": [
+            {
+              "name": "LBRule",
+              "properties": {
+                "frontendIPConfiguration": {
+                  "id": "[variables('ExternalLoadbalancerFrontEndIPConfigID')]"
+                },
+                "backendAddressPool": {
+                  "id": "[variables('ExternalLoadbalancerPoolID')]"
+                },
+                "protocol": "tcp",
+                "frontendPort": 80,
+                "backendPort": 80,
+                "enableFloatingIP": false,
+                "idleTimeoutInMinutes": 5,
+                "probe": {
+                  "id": "[variables('ExternalLoadBalancerProbeID')]"
+                }
+              }
+            }
+          ],
+          "probes": [
+            {
+              "name": "tcpProbe",
+              "properties": {
+                "protocol": "tcp",
+                "port": 80,
+                "intervalInSeconds": 5,
+                "numberOfProbes": 2
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }

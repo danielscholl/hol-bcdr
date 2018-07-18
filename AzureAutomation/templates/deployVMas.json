@@ -1,0 +1,192 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+
+      "subnetId": {
+        "type": "string",
+        "metadata": {
+          "description": "Subnet ID to associate VM to."
+        }
+      },
+      "numberOfInstances": {
+        "type": "int",
+        "metadata": {
+          "description": "Number of VMs to deploy, min 2 max 5"
+        },
+        "minValue": 2,
+        "maxValue": 5,
+        "defaultValue": 2
+      },
+      "vmName": {
+        "type": "string",
+        "metadata": {
+          "description": "Virtual Machine 1 Server Name."
+        },
+        "minLength": 2,
+        "defaultValue": "vm"
+      },
+      "vmSize": {
+        "type": "string",
+        "metadata": {
+          "description": "The virtual machine server size."
+        },
+        "defaultValue": "Standard_A1"
+      },
+      "adminUserName": {
+        "type": "string",
+        "metadata": {
+          "description": "Admin user account name."
+        },
+        "minLength": 4
+      },
+      "adminPassword": {
+        "type": "securestring",
+        "metadata": {
+          "description": "Admin user account password."
+        },
+        "minLength": 12
+      },
+      "Publisher": {
+        "type": "string",
+        "metadata": {
+          "description": "The Image Publisher Type"
+        },  
+        "allowedValues": [
+          "MicrosoftWindowsServer",
+          "MicrosoftSQLServer"
+        ],
+        "defaultValue": "MicrosoftWindowsServer"
+      },
+      "Offer": {
+        "type": "string",
+        "metadata": {
+          "description": "The Image Offer Type"
+        },
+        "allowedValues": [
+          "WindowsServer",
+          "SQL2016SP1-WS2016"
+        ],
+        "defaultValue": "WindowsServer"
+      },
+      "Sku": {
+        "type": "string",
+        "metadata": {
+          "description": "The version for the VM."
+        },
+        "allowedValues": [
+          "2016-Datacenter",
+          "Standard"
+        ],
+        "defaultValue": "2016-Datacenter"
+      }
+    },
+    "variables": {
+      "AvailabilitySetName": "[concat(parameters('vmName'), '-as')]"
+    },
+    "resources": [
+      {
+        "comments": "## Availability Set ##",
+        "type": "Microsoft.Compute/availabilitySets",
+        "name": "[variables('AvailabilitySetName')]",
+        "apiVersion": "2016-04-30-preview",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "platformUpdateDomainCount": 6,
+          "platformFaultDomainCount": 3,
+          "managed": true
+        }
+      },
+      {
+        "comments": "## Network Interface ##",
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[concat(parameters('vmName'), copyIndex(), '-nic')]",
+        "apiVersion": "2016-03-30",
+        "location": "[resourceGroup().location]",
+        "copy": {
+          "name": "nicLoop",
+          "count": "[parameters('numberOfInstances')]"
+        },
+        "dependsOn": [],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[parameters('subnetId')]"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "comments": "## Virtual Machine ##",
+        "type": "Microsoft.Compute/virtualMachines",
+        "name": "[concat(parameters('vmName'), copyIndex())]",
+        "apiVersion": "2016-04-30-preview",
+        "location": "[resourceGroup().location]",
+        "copy": {
+          "name": "virtualMachineLoop",
+          "count": "[parameters('numberOfInstances')]"
+        },
+        "dependsOn": [
+          "nicLoop",
+          "[resourceId('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
+        ],
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[parameters('vmSize')]"
+          },
+          "availabilitySet": {
+            "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[parameters('Publisher')]",
+              "offer": "[parameters('Offer')]",
+              "sku": "[parameters('Sku')]",
+              "version": "latest"
+            },
+            "osDisk": {
+              "createOption": "FromImage"
+            }
+          },
+          "osProfile": {
+            "computerName": "[concat(parameters('vmName'), copyIndex())]",
+            "adminUsername": "[parameters('adminUserName')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('vmName'), copyindex(), '-nic'))]"
+              }
+            ]
+          },
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": false
+            }
+          }
+        },
+        "resources": []
+      }
+    ],
+    "outputs": {
+      "availabilitySet": {
+        "type": "object",
+        "value": {
+          "name": "[variables('AvailabilitySetName')]"
+        }
+      },
+      "virtualMachine": {
+        "type": "object",
+        "value": {
+          "instanceCount": "[parameters('numberOfInstances')]"
+        }
+      }
+    }
+  }
