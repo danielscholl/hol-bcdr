@@ -99,7 +99,7 @@ try {
   #---------Inputs variables for NewRunAsAccountCertKeyVault.ps1 child bootstrap script--------------
   $automationAccountName = Get-AutomationVariable -Name 'automationAccountName'
   $SubscriptionId = Get-AutomationVariable -Name 'azureSubscriptionId'
-  $ResourceGroupName = Get-AutomationVariable -Name 'omsResourceGroupName'
+  $ResourceGroupName = Get-AutomationVariable -Name 'automationGroupName'
 
   if ($servicePrincipalConnection -eq $null) {
     #---------Read the Credentials variable---------------

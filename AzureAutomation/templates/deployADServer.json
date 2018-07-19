@@ -169,7 +169,7 @@
             "typeHandlerVersion": "2.19",
             "autoUpgradeMinorVersion": true,
             "settings": {
-              "ModulesUrl": "[concat(variables('assetLocation'), '/scripts/CreateADPDC.zip')]",
+              "ModulesUrl": "[concat(variables('assetLocation'), '/dsc/CreateADPDC.zip')]",
               "ConfigurationFunction": "CreateADPDC.ps1\\CreateADPDC",
               "Properties": {
                   "DomainName": "[parameters('domainName')]",

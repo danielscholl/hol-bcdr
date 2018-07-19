@@ -6,16 +6,16 @@
       "value": "bcdr"
     },
     "jumpServerSize": {
-      "value": "Standard_A1_v2"
+      "value": "Standard_A2_v2"
     },
     "adServerSize": {
       "value": "Standard_A2_v2"
     },
     "webServerSize": {
-      "value": "Standard_A2_v2"
+      "value": "Standard_D2_v2"
     },
     "dbServerSize": {
-      "value": "Standard_A2_v2"
+      "value": "Standard_A4_v2"
     }
   }
 }

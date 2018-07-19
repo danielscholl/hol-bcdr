@@ -124,7 +124,7 @@ $BASE_DIR = Get-ScriptDirectory
 $DEPLOYMENT = Split-Path $BASE_DIR -Leaf
 LoginAzure
 CreateResourceGroup $ResourceGroupName $Location
-CreateResourceGroup $ResourceGroupName2 $Location2
+#CreateResourceGroup $ResourceGroupName2 $Location2
 
 Write-Color -Text "Retrieving Storage Account Information..." -Color Green
 $StorageAccountName = GetStorageAccount $AzureAutomationGroup

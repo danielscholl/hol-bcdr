@@ -154,9 +154,9 @@ CreateResourceGroup $ResourceGroupName $Location
 ## Deploy Template          ##
 ##############################
 Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
-Write-Color -Text "Deploying ", "$DEPLOYMENT ", "template..." -Color Green, Red, Green
+Write-Color -Text "Deploying ", "StorageAccount ", "template..." -Color Green, Red, Green
 Write-Color -Text "---------------------------------------------------- "-Color Yellow
-New-AzureRmResourceGroupDeployment -Name $DEPLOYMENT `
+New-AzureRmResourceGroupDeployment -Name "$DEPLOYMENT-Storage" `
   -TemplateFile $BASE_DIR\azuredeploy.json `
   -TemplateParameterFile $BASE_DIR\azuredeploy.parameters.json `
   -ResourceGroupName $ResourceGroupName
@@ -167,9 +167,9 @@ $StorageAccountName = GetStorageAccount $ResourceGroupName
 ##############################
 ## Sync script artifacts    ##
 ##############################
-$DIRECTORY = "scripts"
+$DIRECTORY = "dsc"
 Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
-Write-Color -Text "Uploading ", "$DIRECTORY ", "artifacts..." -Color Green, Red, Green
+Write-Color -Text "Uploading ", "$DEPLOYMENT-dsc ", "artifacts..." -Color Green, Red, Green
 Write-Color -Text "---------------------------------------------------- "-Color Yellow
 
 Write-Color -Text "Creating Container for $DIRECTORY..." -Color Yellow
@@ -185,7 +185,7 @@ foreach ($file in $files) {
 ##############################
 $DIRECTORY = "templates"
 Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
-Write-Color -Text "Uploading ", "$DIRECTORY ", "artifacts..." -Color Green, Red, Green
+Write-Color -Text "Uploading ", "$DIRECTORY-templates ", "artifacts..." -Color Green, Red, Green
 Write-Color -Text "---------------------------------------------------- "-Color Yellow
 
 Write-Color -Text "Creating Container for $DIRECTORY..." -Color Yellow
@@ -195,3 +195,33 @@ $files = @(Get-ChildItem $BASE_DIR\$DIRECTORY)
 foreach ($file in $files) {
   Upload-File $ResourceGroupName $DIRECTORY $BASE_DIR\$DIRECTORY\$file
 }
+
+##############################
+## Sync template artifacts  ##
+##############################
+$DIRECTORY = "runbooks"
+Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
+Write-Color -Text "Uploading ", "$DIRECTORY-runbooks ", "artifacts..." -Color Green, Red, Green
+Write-Color -Text "---------------------------------------------------- "-Color Yellow
+
+Write-Color -Text "Creating Container for $DIRECTORY..." -Color Yellow
+Create-Container $ResourceGroupName $DIRECTORY
+
+$files = @(Get-ChildItem $BASE_DIR\$DIRECTORY)
+foreach ($file in $files) {
+  Upload-File $ResourceGroupName $DIRECTORY $BASE_DIR\$DIRECTORY\$file
+}
+
+##############################
+## Deploy Template          ##
+##############################
+$jobGuid = [guid]::NewGuid()
+
+Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
+Write-Color -Text "Deploying ", "$DEPLOYMENT-Automation ", "template..." -Color Green, Red, Green
+Write-Color -Text "---------------------------------------------------- "-Color Yellow
+New-AzureRmResourceGroupDeployment -Name "$DEPLOYMENT-Automation" `
+  -TemplateFile $BASE_DIR\deployAutomation.json `
+  -TemplateParameterFile $BASE_DIR\deployAutomation.parameters.json `
+  -StorageAccountName $StorageAccountName -jobGuid1 $jobGuid `
+  -ResourceGroupName $ResourceGroupName
