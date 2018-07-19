@@ -15,7 +15,7 @@ Param(
   [string]$Subscription = $env:AZURE_SUBSCRIPTION,
 
   [string]$ResourceGroupName = "BCDRAzureAutomation",
-  [string]$Location = "westus"
+  [string]$Location = "westcentralus"
 )
 . ../.env.ps1
 Get-ChildItem Env:AZURE*
@@ -215,13 +215,16 @@ foreach ($file in $files) {
 ##############################
 ## Deploy Template          ##
 ##############################
-$jobGuid = [guid]::NewGuid()
+$jobGuid1 = [guid]::NewGuid()
+$jobGuid2 = [guid]::NewGuid()
+$jobGuid3 = [guid]::NewGuid()
 
 Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
-Write-Color -Text "Deploying ", "$DEPLOYMENT-Automation ", "template..." -Color Green, Red, Green
+Write-Color -Text "Deploying ", "$DEPLOYMENT-Account ", "template..." -Color Green, Red, Green
 Write-Color -Text "---------------------------------------------------- "-Color Yellow
 New-AzureRmResourceGroupDeployment -Name "$DEPLOYMENT-Automation" `
   -TemplateFile $BASE_DIR\deployAutomation.json `
   -TemplateParameterFile $BASE_DIR\deployAutomation.parameters.json `
-  -StorageAccountName $StorageAccountName -jobGuid1 $jobGuid `
+  -StorageAccountName $StorageAccountName `
+  -jobGuid1 $jobGuid1 -jobGuid2 $jobGuid2 -jobGuid3 $jobGuid3 `
   -ResourceGroupName $ResourceGroupName
