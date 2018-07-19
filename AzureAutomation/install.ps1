@@ -213,6 +213,22 @@ foreach ($file in $files) {
 }
 
 ##############################
+## Sync application artifacts  ##
+##############################
+$DIRECTORY = "artifacts"
+Write-Color -Text "`r`n---------------------------------------------------- "-Color Yellow
+Write-Color -Text "Uploading ", "$DIRECTORY-artifacts ", "artifacts..." -Color Green, Red, Green
+Write-Color -Text "---------------------------------------------------- "-Color Yellow
+
+Write-Color -Text "Creating Container for $DIRECTORY..." -Color Yellow
+Create-Container $ResourceGroupName $DIRECTORY
+
+$files = @(Get-ChildItem $BASE_DIR\$DIRECTORY)
+foreach ($file in $files) {
+  Upload-File $ResourceGroupName $DIRECTORY $BASE_DIR\$DIRECTORY\$file
+}
+
+##############################
 ## Deploy Template          ##
 ##############################
 $jobGuid1 = [guid]::NewGuid()
