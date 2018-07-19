@@ -310,6 +310,111 @@
           }
         }
       }
+    },
+    {
+      "name": "TemplateDbServers",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateVNetDNS"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployVMas.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet3Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('dbServerName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('dbServerSize')]"
+          },
+          "Publisher": {
+            "value": "MicrosoftSQLServer"
+          },
+          "Offer": {
+            "value": "SQL2016SP1-WS2016"
+          },
+          "Sku": {
+            "value": "Standard"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          },
+          "StorageAccountName": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "ScriptName": {
+            "value": "dbConfig"
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateWebServers",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateVNetDNS"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployVMas.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet2Id]"
+          },
+          "vmName": {
+            "value": "[concat(parameters('prefix'), '-vm-', variables('webServerName'))]"
+          },
+          "vmSize": {
+            "value": "[parameters('webServerSize')]"
+          },
+          "adminUserName": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminUserName"
+            }
+          },
+          "adminPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('TemplateKeyVault').outputs.keyVault.value.id]"
+              },
+              "secretName": "adminPassword"
+            }
+          },
+          "StorageAccountName": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "ScriptName": {
+            "value": "webConfig"
+          }
+        }
+      }
     }
   ],
   "outputs": {
