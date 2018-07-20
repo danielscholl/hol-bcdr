@@ -32,8 +32,14 @@ cd lab
 __Create the Environment Variables:__
 
 ```powershell
+# Copy the Sample Environment File to be used.
 cp .env_sample.ps1 .env.ps1
-code env.ps1
+
+# Edit the Environment file.
+code .env.ps1
+
+# Load the Environment file.
+. ./.env.ps1
 ```
 
 > Modify the file with the desired values and save it.
