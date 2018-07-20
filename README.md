@@ -29,6 +29,15 @@ git clone https://github.com/danielscholl/bcdr-hol.git lab
 cd lab
 ```
 
+__Create the Environment Variables:__
+
+```powershell
+cp .env_sample.ps1 .env.ps1
+code env.ps1
+```
+
+> Modify the file with the desired values and save it.
+
 __Install the Azure Automation Resources:__
 
 ```powershell
