@@ -9,6 +9,18 @@ __Create a Lab Machine:__
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
+1. RDP to the Lab Virtual Machine and open an elevated powershell session.
+
+```powershell
+powershell -Command "Start-Process PowerShell -Verb RunAs"
+C:\lab\setup.ps1
+```
+
+1. Install the Required Software
+
+```powershell
+
+```
 
 1. Open [Azure Cloud Shell](https://shell.azure.com)
 

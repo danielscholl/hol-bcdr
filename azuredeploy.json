@@ -76,8 +76,8 @@
     "publicIPAddressName": "lab-ip",
     "dnsNameForPublicIP": "[uniqueString(resourceGroup().id)]",
     "scriptFolder": ".",
-    "scriptFileName": "install.ps1",
-    "fileToBeCopied": "install.ps1",
+    "scriptFileName": "setup.ps1",
+    "fileToBeCopied": "setup.ps1",
     "scriptParameters": "[concat('-artifactsLocation ', parameters('_artifactsLocation'), ' -artifactsLocationSasToken \"', parameters('_artifactsLocationSasToken'), '\" -folderName ', variables('scriptFolder'), ' -fileToInstall ', variables('fileToBeCopied'))]"
   },
   "resources": [
