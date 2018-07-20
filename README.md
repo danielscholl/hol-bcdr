@@ -13,12 +13,13 @@ __Create a Lab Machine:__
 
 ---------------------------------------------------------------
 
-Open an RDP Session to the Lab Virtual Machine and execute the setup script.
+Open an RDP Session to the Lab Virtual Machine then download and execute the setup script.
 
 __Setup the Lab Server:__
 
 ```powershell
-powershell -Command "Start-Process C:\setup.ps1"
+curl https://raw.githubusercontent.com/danielscholl/hol-bcdr/master/setup.ps1 -o setup.ps1
+powershell -Command "Start-Process setup.ps1"
 ```
 
 
