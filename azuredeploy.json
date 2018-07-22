@@ -55,14 +55,7 @@
       "metadata": {
         "description": "The base URI where desired setup script is located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
       },
-      "defaultValue": "https://raw.githubusercontent.com/danielscholl/master/hol-bcdr"
-    },
-    "_artifactsLocationSasToken": {
-      "type": "securestring",
-      "metadata": {
-        "description": "OPTIONAL - The sasToken required to access _artifactsLocation if necessary.  When the template is deployed using the accompanying scripts, a sasToken will be automatically generated."
-      },
-      "defaultValue": ""
+      "defaultValue": "https://raw.githubusercontent.com/danielscholl/hol-bcdr/master/"
     },
     "script": {
       "type": "string",
@@ -221,7 +214,7 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "fileUris": [
-                "[concat(parameters('_artifactsLocation'), '/', variables('ScriptFolder'), '/', parameters('script'), parameters('_artifactsLocationSasToken'))]"
+                "[concat(parameters('_artifactsLocation'), parameters('script'))]"
               ],
               "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('scriptFolder'), '/', parameters('script'))]"
             }
