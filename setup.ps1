@@ -1,15 +1,24 @@
-# Install Chocolatey
-Set-ExecutionPolicy Bypass -Scope Process -Force;
+#Install Chocolatey
+Set-ExecutionPolicy Bypass -Scope Process -Force
+Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-#Register Chocolatly Package source
-Register-PackageSource -Name chocolatey -ProviderName Chocolatey -Location http://chocolatey.org/api/v2/ -Trusted -Force
+#Assign Packages to Install
+$Packages = 'googlechrome', `
+  'visualstudiocode', `
+  'git', `
+  'visualstudio2017community', `
+  'visualstudio2017-workload-azure', `
+  'visualstudio2017-workload-netweb'
 
-#Install packages
-Install-Package -Name GoogleChrome -Source Chocolatey -Force
-Install-Package -Name visualstudiocode -Source Chocolatey -Force
+#Install Packages
+ForEach ($PackageName in $Packages)
+{choco install $PackageName -y}
 
 # Install AzureRM Powershell Module
 Install-Module -Name Azure -Repository PSGallery -Force -AllowClobber
 Install-Module -Name AzureRM -Repository PSGallery -Force -AllowClobber
 Import-Module -Name Azure
 Import-Module -Name AzureRM
+
+#Reboot
+Restart-Computer

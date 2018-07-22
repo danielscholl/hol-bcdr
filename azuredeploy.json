@@ -178,17 +178,42 @@
       },
       "resources": [
         {
-          "type": "extensions",
-          "name": "CustomScriptExtension",
-          "apiVersion": "2017-03-30",
-          "location": "[parameters('location')]",
+          "apiVersion": "[providers('Microsoft.DevTestLab','labs').apiVersions[0]]",
+          "type": "microsoft.devtestlab/schedules",
+          "name": "[concat('shutdown-computevm-',variables('vmName'))]",
+          "location": "[resourceGroup().location]",
           "dependsOn": [
-            "[variables('vmName')]"
+            "[concat('Microsoft.Compute/virtualMachines/',concat(variables('vmName')))]"
           ],
+          "properties": {
+            "status": "Enabled",
+            "taskType": "ComputeVmShutdownTask",
+            "dailyRecurrence": {
+              "time": "1900"
+            },
+            "timeZoneId": "Central Standard Time",
+            "notificationSettings": {
+              "status": "Disabled",
+              "timeInMinutes": 15
+            },
+            "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines',concat(variables('vmName')))]"
+          }
+        },
+        {
+          "name": "CustomScriptExtension",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2017-12-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+          ],
+          "tags": {
+            "displayName": "Install LabVM Applications"
+          },
           "properties": {
             "publisher": "Microsoft.Compute",
             "type": "CustomScriptExtension",
-            "typeHandlerVersion": "1.8",
+            "typeHandlerVersion": "1.4",
             "autoUpgradeMinorVersion": true,
             "settings": {
               "fileUris": [
