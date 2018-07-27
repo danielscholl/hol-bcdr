@@ -48,9 +48,28 @@ code .env.ps1
 __Install the Azure Automation Resources:__
 
 ```powershell
-. ./.env.ps1  # Source the environment variables
+# Load the Environment file and move to the directory
+. ./.env.ps1 
 cd AzureAutomation
-./install.ps1  # Answer the questions
+
+# Run the Install Script for installing that Automation account and load the artifiacts.
+./install.ps1  # Answer the questions that are presented
   subscriptionAdmin: {your_portal_login_id}
   subscriptionPassword: {your_portal_login_pwd}
+
+cd ..
+```
+
+__Install the Azure Automation Resources:__
+
+```powershell
+# Load the Environment file and move to the directory
+. ./.env.ps1 
+cd IaaSPrimarySite
+
+# Install the Infrastructure for the IaaS Primary Site
+./install.ps1   # Answer the questions that are presented
+  adminPassword:  {your_local_admin_password}
+
+cd ..
 ```
