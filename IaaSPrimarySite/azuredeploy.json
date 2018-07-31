@@ -415,6 +415,32 @@
           }
         }
       }
+    },
+    {
+      "name": "TemplateLoadBalancer",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateWebServers"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployLoadBalancer.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "isExternal": {
+            "value": "Yes"
+          },
+          "unique": {
+            "value": "[parameters('prefix')]"
+          },
+          "subnetId": {
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet2Id]"
+          }
+        }
+      }
     }
   ],
   "outputs": {

@@ -1,0 +1,134 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "unique": {
+      "type": "string",
+      "metadata": {
+        "description": "Small unique string."
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet ID to associate VM to."
+      }
+    },
+    "staticIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Static IP Address for the Load Balancer."
+      }
+    },
+    "isExternal": {
+      "type": "string",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Select whether an image should be used to create resource."
+      },
+      "defaultValue": "No"
+    }
+  },
+  "variables": {
+    "cleanUnique": "[toLower(replace(parameters('unique'),'-', ''))]",
+    "ipName": "[concat(variables('LBName'), '-ip')]",
+    "ipId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('ipName'))]",
+    "ipDnsName": "[concat(variables('cleanUnique'), uniqueString(resourceGroup().id))]",
+    "lbName": "[concat(parameters('unique'), '-lb')]",
+    "lbId": "[resourceId('Microsoft.Network/loadBalancers', variables('lbName'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-10-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('ipName')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "External Load Balancer Public IP"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('ipDnsName')]"
+        }
+      }
+    },
+    {
+      "comments": "## Load Balancer ##",
+      "name": "[variables('LBName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "Internal Load Balancer"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "lbFrontEnd",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[if(equals(parameters('isExternal'), 'Yes'), variables('ipId'), json('null'))]"
+              },
+              "privateIPAddress": "[if(equals(parameters('isExternal'), 'No'), parameters('staticIpAddress'), json('null'))]",
+              "privateIPAllocationMethod": "[if(equals(parameters('isExternal'), 'No'), 'Static', json('null'))]",
+              "subnet": {
+                "id": "[if(equals(parameters('isExternal'), 'No'), parameters('subnetId'), json('null'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "lbBackEnd"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('LBId'), '/frontendIpConfigurations/lbFrontEnd')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('LBId'), '/backendAddressPools/lbBackEnd')]"
+              },
+              "probe": {
+                "id": "[concat(variables('LBId'), '/probes/lbProbe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 5
+            },
+            "name": "lbrule"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 80,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2
+            },
+            "name": "lbProbe"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "loadBalancer": {
+      "type": "object",
+      "value": {
+        "id": "[variables('LBId')]",
+        "name": "[variables('LBName')]"
+      }
+    }
+  }
+}
