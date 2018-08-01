@@ -45,6 +45,13 @@
       },
       "defaultValue": "10.0.2.0/24"
     },
+    "dataLbIp": {
+      "type": "string",
+      "metadata": {
+        "description": "IP Address for Data Network Load Balancer"
+      },
+      "defaultValue": "10.0.2.10"
+    },
     "adPrefix": {
       "type": "string",
       "metadata": {
@@ -417,7 +424,7 @@
       }
     },
     {
-      "name": "TemplateLoadBalancer",
+      "name": "TemplateExternalLoadBalancer",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2015-01-01",
       "dependsOn": [
@@ -426,18 +433,38 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(variables('assetLocation'),'/templates/deployLoadBalancer.json')]",
+          "uri": "[concat(variables('assetLocation'),'/templates/deployExternalLoadBalancer.json')]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "isExternal": {
-            "value": "Yes"
-          },
+          "unique": {
+            "value": "[parameters('prefix')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "TemplateInternalLoadBalancer",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "TemplateDbServers"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('assetLocation'),'/templates/deployInternalLoadBalancer.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
           "unique": {
             "value": "[parameters('prefix')]"
           },
           "subnetId": {
-            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet2Id]"
+            "value": "[reference('TemplateVNet').outputs.subnets.value.subnet3Id]"
+          },
+          "staticIpAddress": {
+            "value": "[parameters('dataLbIp')]"
           }
         }
       }

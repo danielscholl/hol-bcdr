@@ -1,0 +1,127 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "unique": {
+      "type": "string",
+      "metadata": {
+        "description": "Small unique string."
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet ID to associate VM to."
+      }
+    },
+    "staticIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Static IP Address for the Load Balancer."
+      }
+    }
+  },
+  "variables": {
+    "lbName": "[concat(parameters('unique'), '-intlb')]",
+    "lbId": "[resourceId('Microsoft.Network/loadBalancers', variables('lbName'))]"
+  },
+  "resources": [
+    {
+      "comments": "## Load Balancer ##",
+      "name": "[variables('LBName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "Internal Load Balancer"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "lbFrontEnd",
+            "properties": {
+              "privateIPAddress": "[parameters('staticIpAddress')]",
+              "privateIPAllocationMethod": "Static",
+              "subnet": {
+                "id": "[parameters('subnetId')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "lbBackEnd"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('LBId'), '/frontendIpConfigurations/lbFrontEnd')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('LBId'), '/backendAddressPools/lbBackEnd')]"
+              },
+              "probe": {
+                "id": "[concat(variables('LBId'), '/probes/webProbe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 8080,
+              "idleTimeoutInMinutes": 15
+            },
+            "name": "httprule"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('LBId'), '/frontendIpConfigurations/lbFrontEnd')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(variables('LBId'), '/backendAddressPools/lbBackEnd')]"
+              },
+              "probe": {
+                "id": "[concat(variables('LBId'), '/probes/dbProbe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 1433,
+              "backendPort": 1433,
+              "idleTimeoutInMinutes": 15
+            },
+            "name": "dbrule"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 8080,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "webProbe"
+          },
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 1433,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "dbProbe"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "loadBalancer": {
+      "type": "object",
+      "value": {
+        "id": "[variables('LBId')]",
+        "name": "[variables('LBName')]"
+      }
+    }
+  }
+}
