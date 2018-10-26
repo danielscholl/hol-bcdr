@@ -3,11 +3,10 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
 #Assign Packages to Install
-$Packages = 'googlechrome', `
-  'visualstudiocode', `
-  'visualstudio2017community', `
-  'visualstudio2017-workload-azure', `
-  'visualstudio2017-workload-netweb'
+$Packages = 'googlechrome', 'visualstudiocode'
+#  'visualstudio2017community', `
+#  'visualstudio2017-workload-azure', `
+#  'visualstudio2017-workload-netweb'
 
 #Install Packages
 ForEach ($PackageName in $Packages)
@@ -15,9 +14,10 @@ ForEach ($PackageName in $Packages)
 
 # Install AzureRM Powershell Module
 Install-Module -Name Azure -Repository PSGallery -Force -AllowClobber
-Install-Module -Name AzureRM -Repository PSGallery -Force -AllowClobber
 Import-Module -Name Azure
-Import-Module -Name AzureRM
+
+Install-Module -Name Az -Repository PSGallery -Force -AllowClobber
+Import-Module -Name Az
 
 #Reboot
 Restart-Computer
