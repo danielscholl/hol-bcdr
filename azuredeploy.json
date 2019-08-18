@@ -32,16 +32,18 @@
     },
     "offer": {
       "type": "string",
-      "defaultValue": "VisualStudio",
+      "defaultValue": "visualstudio2019latest",
       "allowedValues": [
         "WindowsServer",
-        "VisualStudio"
+        "VisualStudio",
+        "visualstudio2019latest"
       ]
     },
     "sku": {
       "type": "string",
-      "defaultValue": "VS-2017-Ent-Win10-N",
+      "defaultValue": "vs-2019-comm-latest-win10-n",
       "allowedValues": [
+        "vs-2019-comm-latest-win10-n",
         "VS-2017-Ent-Win10-N",
         "2016-Datacenter-with-Containers",
         "2016-Datacenter"
@@ -147,7 +149,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "Standard_D4_v3"
+          "vmSize": "Standard_D4s_v3"
         },
         "osProfile": {
           "computerName": "[variables('vmName')]",
